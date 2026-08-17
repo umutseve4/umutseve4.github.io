@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>UMUT SEVER — Economics × Engineering Portfolio</title>
 <meta name="description" content="An experimental 5-chapter interactive experience. WebGL fluid, kinetic type, raw visual impact." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet" />
 <style>
 /* ============================================================
-   SEVER/27 — Umut Sever personal portfolio (Awwwards SOTD-style)
+   SEVER/05 — Umut Sever personal portfolio (Awwwards SOTD-style)
    Palette: ultra-minimal dark + neon accent #D40027
    ============================================================ */
 :root{
@@ -127,12 +130,13 @@ nav a:hover::after{transform:scaleX(1);transform-origin:left}
 }
 .hero .chapter-tag{margin-bottom:4vh}
 .hero-title{
-  font-size:clamp(64px,14.5vw,220px);
+  font-size:clamp(44px,11vw,185px);
   font-weight:800;line-height:.86;letter-spacing:-.045em;
   text-transform:uppercase;
 }
-.hero-title .row{display:flex;overflow:hidden}
+.hero-title .row{display:flex;overflow:hidden;white-space:nowrap}
 .hero-title .row.indent{padding-left:clamp(30px,12vw,220px)}
+.hero-title .kinetic{display:inline-flex;white-space:nowrap;flex:0 0 auto}
 .hero-title .char{display:inline-block;will-change:transform}
 .hero-title .accent{color:var(--accent)}
 .hero-title .outline{
@@ -337,7 +341,7 @@ nav a:hover::after{transform:scaleX(1);transform-origin:left}
 <div class="cursor-dot"></div>
 
 <header>
-  <a class="logo" href="#" data-magnetic>SEVER<span>/27</span></a>
+  <a class="logo" href="#" data-magnetic>SEVER<span>/05</span></a>
   <nav>
     <a href="#ch2" data-magnetic>Object</a>
     <a href="#ch3" data-magnetic>Work</a>
@@ -378,7 +382,7 @@ nav a:hover::after{transform:scaleX(1);transform-origin:left}
           <h2 class="reveal">Econ ×<br><span class="ghost">Code</span></h2>
         </div>
         <div class="foot">
-          <span>SEVER — 0.27 / WIRE</span>
+          <span>SEVER — 0.05 / WIRE</span>
           <span class="drag-hint">← Move cursor to distort →</span>
         </div>
       </div>
@@ -505,7 +509,7 @@ nav a:hover::after{transform:scaleX(1);transform-origin:left}
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 /* ============================================================
-   SEVER/27 runtime — fluid shader, magnetic cursor, GSAP scenes
+   SEVER/05 runtime — fluid shader, magnetic cursor, GSAP scenes
    ============================================================ */
 (function () {
   "use strict";
