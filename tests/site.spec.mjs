@@ -1,0 +1,5 @@
+import {test,expect} from '@playwright/test';
+test('core UX is visible and overflow-free',async({page})=>{await page.goto('/');await expect(page.locator('h1')).toContainText('Build.');await expect(page.locator('nav')).toBeVisible();await expect(page.locator('#work article')).toHaveCount(4);expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth)).toBe(false)});
+test('keyboard skip link works',async({page})=>{await page.goto('/');await page.keyboard.press('Tab');await expect(page.locator('.skip')).toBeFocused();await page.keyboard.press('Enter');expect(await page.evaluate(()=>location.hash)).toBe('#main')});
+test('reduced motion disables decorative canvas',async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');await expect(page.locator('#field')).toHaveCSS('display','none')});
+test('proof uses immutable source URLs',async({page})=>{await page.goto('/proof/');const urls=await page.locator('[data-src]').evaluateAll(nodes=>nodes.map(n=>n.dataset.src));expect(urls.every(u=>/[a-f0-9]{40}/.test(u))).toBe(true)});
