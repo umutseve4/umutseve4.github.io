@@ -1,0 +1,59 @@
+name: Apply requested QA fixes
+on:
+  push:
+    branches: [fix/restore-premium-motion]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify expected parent and apply exact edits
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD^)" = "aad62d21683da71341a88bafe6875f9e033e0413"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          proof = Path('proof/index.html')
+          text = proof.read_text()
+          old = 'target="_blank" rel="noopener">repository</a>'
+          assert text.count(old) == 2, text.count(old)
+          proof.write_text(text.replace(old, 'target="_blank" rel="noopener noreferrer">repository</a>'))
+
+          index = Path('index.html')
+          text = index.read_text()
+          old = '<strong>v0.6.0</strong><span>documented release</span>'
+          new = '<strong>3.11+</strong><span>Python requirement</span>'
+          assert text.count(old) == 1, text.count(old)
+          index.write_text(text.replace(old, new))
+
+          tests = Path('tests/site.spec.mjs')
+          text = tests.read_text()
+          marker = "test('tablet project cards stay separate and contain their content'"
+          assert marker not in text
+          addition = r'''
+          test('tablet project cards stay separate and contain their content',async({page},testInfo)=>{test.skip(testInfo.project.name!=='tablet-768','tablet geometry only');await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');const cards=page.locator('#work .project');await expect(cards).toHaveCount(4);await page.evaluate(()=>document.fonts.ready);const violations=await cards.evaluateAll(nodes=>{const epsilon=1,rect=node=>{const r=node.getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom}},boxes=nodes.map(rect),issues=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j],overlapX=Math.min(a.right,b.right)-Math.max(a.left,b.left),overlapY=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(overlapX>epsilon&&overlapY>epsilon)issues.push(`cards ${i+1} and ${j+1} overlap`)}nodes.forEach((card,index)=>{const outer=boxes[index];[...card.children].forEach((child,childIndex)=>{const inner=rect(child);if(inner.left<outer.left-epsilon||inner.top<outer.top-epsilon||inner.right>outer.right+epsilon||inner.bottom>outer.bottom+epsilon)issues.push(`card ${index+1} child ${childIndex+1} escapes bounds`)})});return issues});expect(violations).toEqual([])});
+          '''
+          tests.write_text(text + addition)
+          PY
+      - name: Run static verification
+        run: npm test
+      - name: Run tablet geometry test
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test --project=tablet-768 --grep "tablet project cards stay separate"
+      - name: Replace bootstrap commit with the requested single commit
+        shell: bash
+        run: |
+          rm .github/workflows/apply-qa-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit --amend --no-edit
+          git push --force-with-lease origin HEAD:fix/restore-premium-motion
