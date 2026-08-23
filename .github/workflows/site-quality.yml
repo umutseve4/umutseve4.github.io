@@ -6,14 +6,37 @@ on:
 permissions:
   contents: read
 jobs:
-  test:
+  static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+        with: {node-version: 20}
       - run: npm install --ignore-scripts
       - run: npm test
+  browser:
+    name: browser-${{ matrix.id }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: recruiter
+            grep: "core recruiter UX|contact targets"
+          - id: fallback
+            grep: "keyboard skip link|JavaScript-off fallback"
+          - id: content
+            grep: "cold-start limits|tablet project cards|proof uses immutable"
+          - id: motion-init
+            grep: "normal motion initializes|reduced motion suppresses"
+          - id: tilt
+            grep: "fine-pointer card tilt"
+          - id: raf-lifecycle
+            grep: "offscreen hero pauses"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - run: npm run test:browser -- --grep "${{ matrix.grep }}"

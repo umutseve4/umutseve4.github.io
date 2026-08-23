@@ -1,15 +1,16 @@
 # umutseve4.github.io
 
-Evidence-first portfolio for **Umut Sever** — Economics Engineering × Data Systems.
+Recruiter-focused, evidence-first portfolio for **Umut Sever** — Data Engineering × Economics.
 
 ## Product decisions
 
-- Preserves the SEVER/05 editorial identity instead of adopting a generic portfolio template.
-- Prioritizes four verified projects: Enflasyonum, MakroQuest, econ-lakehouse, and Homefront Universe.
-- Separates implemented, tested, deployed, and production-ready status.
-- Keeps known limitations visible next to each claim.
-- Uses dependency-free Canvas 2D for decoration; animation pauses off-screen, in hidden tabs, and under reduced-motion.
-- Pins proof artifacts to full 40-character commit SHAs.
+- Preserves the SEVER/05 editorial identity and premium motion instead of adopting a generic portfolio template.
+- States target role and opportunity status in the first viewport.
+- Frames every project through ownership, engineering decision, measured result, evidence, and known boundary.
+- Separates implemented, tested, verified, deployed, and production-ready status.
+- Keeps free-host cold starts and operational limitations visible before outbound demo links.
+- Uses dependency-free Canvas 2D; animation pauses off-screen, in hidden tabs, and under reduced-motion.
+- Does not publish a résumé link until a current, versioned résumé file exists.
 
 ## Local verification
 
@@ -20,7 +21,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Static verification checks document structure, accessibility hooks, immutable evidence URLs, timezone correctness, mobile CSS, reduced-motion handling, and external-link safety. Playwright checks desktop/mobile overflow, navigation visibility, project count, keyboard skip-link behavior, reduced motion, and proof URL pinning.
+Static verification checks document structure, recruiter positioning, project ownership, engineering decisions, immutable evidence URLs, timezone correctness, mobile CSS, reduced-motion handling, and external-link safety. Playwright checks desktop/mobile overflow, recruiter content, project count, contact safety, keyboard fallback, reduced motion, motion lifecycle, and proof URL pinning.
 
 ## Evidence boundary
 
