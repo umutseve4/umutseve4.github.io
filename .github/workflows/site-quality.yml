@@ -26,7 +26,7 @@ jobs:
           - id: fallback
             grep: "keyboard skip link|JavaScript-off fallback"
           - id: content
-            grep: "cold-start limits|proof uses immutable"
+            grep: "cold-start limits|tablet project cards|proof uses immutable"
           - id: motion-init
             grep: "normal motion initializes|reduced motion suppresses"
           - id: tilt
