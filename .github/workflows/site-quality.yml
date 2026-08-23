@@ -29,8 +29,10 @@ jobs:
             grep: "cold-start limits|proof uses immutable"
           - id: motion-init
             grep: "normal motion initializes|reduced motion suppresses"
-          - id: motion-lifecycle
-            grep: "fine-pointer card tilt|offscreen hero pauses"
+          - id: tilt
+            grep: "fine-pointer card tilt"
+          - id: raf-lifecycle
+            grep: "offscreen hero pauses"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
