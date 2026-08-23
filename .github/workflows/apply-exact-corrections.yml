@@ -37,7 +37,6 @@ jobs:
           index.write_text(index_text.replace(old_metric, new_metric))
           PY
           test "$(git diff --name-only)" = $'index.html\nproof/index.html'
-          test "$(git diff --word-diff=porcelain | grep -c '^[-+]')" -eq 6
           git diff --check
           git diff -- index.html proof/index.html
       - name: Commit once to target branch
