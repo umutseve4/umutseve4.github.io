@@ -1,1 +1,1 @@
-{"name":"umutseve4-portfolio","private":true,"scripts":{"test":"node scripts/verify-site.mjs","test:browser":"playwright test"},"devDependencies":{"@playwright/test":"1.55.0"}}
+{"name":"umutseve4-portfolio","private":true,"scripts":{"test":"node scripts/verify-site.mjs","test:browser":"playwright test"},"devDependencies":{"@playwright/test":"1.62.1"}}
