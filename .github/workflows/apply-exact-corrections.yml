@@ -1,0 +1,50 @@
+name: Apply exact correctness fixes
+
+on:
+  push:
+    branches:
+      - automation/apply-exact-corrections-20260823
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-premium-motion
+          fetch-depth: 0
+      - name: Apply and verify exact replacements
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          proof = Path("proof/index.html")
+          proof_text = proof.read_text()
+          old_rel = 'target="_blank" rel="noopener"'
+          new_rel = 'target="_blank" rel="noopener noreferrer"'
+          assert proof_text.count(old_rel) == 2, proof_text.count(old_rel)
+          proof.write_text(proof_text.replace(old_rel, new_rel))
+
+          index = Path("index.html")
+          index_text = index.read_text()
+          old_metric = '<strong>v0.6.0</strong><span>documented release</span>'
+          new_metric = '<strong>3.11+</strong><span>Python requirement</span>'
+          assert index_text.count(old_metric) == 1, index_text.count(old_metric)
+          index.write_text(index_text.replace(old_metric, new_metric))
+          PY
+          test "$(git diff --name-only)" = $'index.html\nproof/index.html'
+          test "$(git diff --word-diff=porcelain | grep -c '^[-+]')" -eq 6
+          git diff --check
+          git diff -- index.html proof/index.html
+      - name: Commit once to target branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html proof/index.html
+          git commit -m "fix: correct repository rels and Python requirement"
+          git push origin HEAD:fix/restore-premium-motion
