@@ -1,59 +1,71 @@
-name: Apply requested QA fixes
+name: Finalize requested QA fixes
 on:
   push:
     branches: [fix/restore-premium-motion]
 permissions:
   contents: write
 jobs:
-  apply:
+  finalize:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
-      - name: Verify expected parent and apply exact edits
+          fetch-depth: 0
+      - name: Normalize the requested final tree
         shell: bash
         run: |
-          test "$(git rev-parse HEAD^)" = "aad62d21683da71341a88bafe6875f9e033e0413"
+          git merge-base --is-ancestor aad62d21683da71341a88bafe6875f9e033e0413 HEAD
           python3 - <<'PY'
           from pathlib import Path
 
           proof = Path('proof/index.html')
           text = proof.read_text()
-          old = 'target="_blank" rel="noopener">repository</a>'
-          assert text.count(old) == 2, text.count(old)
-          proof.write_text(text.replace(old, 'target="_blank" rel="noopener noreferrer">repository</a>'))
+          assert text.count('target="_blank" rel="noopener noreferrer">repository</a>') == 2
+          assert 'target="_blank" rel="noopener">repository</a>' not in text
 
           index = Path('index.html')
           text = index.read_text()
-          old = '<strong>v0.6.0</strong><span>documented release</span>'
-          new = '<strong>3.11+</strong><span>Python requirement</span>'
-          assert text.count(old) == 1, text.count(old)
-          index.write_text(text.replace(old, new))
+          metric = '<strong>3.11+</strong><span>Python requirement</span>'
+          assert text.count(metric) == 1
+          assert '<strong>v0.6.0</strong><span>documented release</span>' not in text
 
           tests = Path('tests/site.spec.mjs')
           text = tests.read_text()
-          marker = "test('tablet project cards stay separate and contain their content'"
-          assert marker not in text
-          addition = r'''
-          test('tablet project cards stay separate and contain their content',async({page},testInfo)=>{test.skip(testInfo.project.name!=='tablet-768','tablet geometry only');await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');const cards=page.locator('#work .project');await expect(cards).toHaveCount(4);await page.evaluate(()=>document.fonts.ready);const violations=await cards.evaluateAll(nodes=>{const epsilon=1,rect=node=>{const r=node.getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom}},boxes=nodes.map(rect),issues=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j],overlapX=Math.min(a.right,b.right)-Math.max(a.left,b.left),overlapY=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(overlapX>epsilon&&overlapY>epsilon)issues.push(`cards ${i+1} and ${j+1} overlap`)}nodes.forEach((card,index)=>{const outer=boxes[index];[...card.children].forEach((child,childIndex)=>{const inner=rect(child);if(inner.left<outer.left-epsilon||inner.top<outer.top-epsilon||inner.right>outer.right+epsilon||inner.bottom>outer.bottom+epsilon)issues.push(`card ${index+1} child ${childIndex+1} escapes bounds`)})});return issues});expect(violations).toEqual([])});
-          '''
-          tests.write_text(text + addition)
+          current_tilt = "test('fine-pointer card tilt is bounded and resets',async({page,browserName})=>{test.skip(browserName!=='chromium');await page.addInitScript(()=>{const nativeMatchMedia=window.matchMedia.bind(window);window.matchMedia=query=>query.replace(/\\s/g,'')==='(pointer:fine)'?{matches:true,media:query,onchange:null,addListener(){},removeListener(){},addEventListener(){},removeEventListener(){},dispatchEvent(){return true}}:nativeMatchMedia(query)});await page.goto('/');const card=page.locator('.project').first();await card.hover({position:{x:20,y:20}});await expect.poll(()=>card.getAttribute('data-tilt-active')).toBe('true');const values=await card.evaluate(n=>[parseFloat(getComputedStyle(n).getPropertyValue('--tilt-x')),parseFloat(getComputedStyle(n).getPropertyValue('--tilt-y'))]);expect(values.every(v=>Math.abs(v)<=2.01)).toBe(true);await page.mouse.move(0,0);await expect.poll(()=>card.getAttribute('data-tilt-active')).toBe('false')});"
+          original_tilt = "test('fine-pointer card tilt is bounded and resets',async({page,browserName})=>{test.skip(browserName!=='chromium');await page.goto('/');const card=page.locator('.project').first();await card.hover({position:{x:20,y:20}});await expect.poll(()=>card.getAttribute('data-tilt-active')).toBe('true');const values=await card.evaluate(n=>[parseFloat(getComputedStyle(n).getPropertyValue('--tilt-x')),parseFloat(getComputedStyle(n).getPropertyValue('--tilt-y'))]);expect(values.every(v=>Math.abs(v)<=2.01)).toBe(true);await page.mouse.move(0,0);await expect.poll(()=>card.getAttribute('data-tilt-active')).toBe('false')});"
+          assert text.count(current_tilt) == 1
+          text = text.replace(current_tilt, original_tilt)
+
+          weak = "test('tablet project cards stay separated and contain their proof lines',async({page},testInfo)=>{test.skip(testInfo.project.name!=='tablet-768');await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');const cards=page.locator('#work article');await expect(cards).toHaveCount(4);const geometry=await cards.evaluateAll(nodes=>nodes.map(node=>{const rect=node.getBoundingClientRect();const proof=node.querySelector('.proofline');const proofRect=proof?.getBoundingClientRect();return{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,contentFits:node.scrollWidth<=node.clientWidth+1,proofVisible:Boolean(proofRect&&proofRect.width>0&&proofRect.height>0),proofFits:Boolean(proof&&proof.scrollWidth<=proof.clientWidth+1)}}));for(const card of geometry){expect(card.contentFits).toBe(true);expect(card.proofVisible).toBe(true);expect(card.proofFits).toBe(true)}for(let i=0;i<geometry.length;i++)for(let j=i+1;j<geometry.length;j++){const a=geometry[i],b=geometry[j];const overlap=Math.min(a.right,b.right)-Math.max(a.left,b.left)>0&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>0;expect(overlap).toBe(false)}});"
+          strong = "test('tablet project cards stay separate and contain their content',async({page},testInfo)=>{test.skip(testInfo.project.name!=='tablet-768','tablet geometry only');expect(page.viewportSize()).toEqual({width:768,height:1024});await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');const cards=page.locator('#work .project');await expect(cards).toHaveCount(4);await page.evaluate(()=>document.fonts.ready);const violations=await cards.evaluateAll(nodes=>{const epsilon=1,rect=node=>{const r=node.getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom}},boxes=nodes.map(rect),issues=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j],overlapX=Math.min(a.right,b.right)-Math.max(a.left,b.left),overlapY=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(overlapX>epsilon&&overlapY>epsilon)issues.push(`cards ${i+1} and ${j+1} overlap`)}nodes.forEach((card,index)=>{const outer=boxes[index];[...card.children].forEach((child,childIndex)=>{const inner=rect(child);if(inner.left<outer.left-epsilon||inner.top<outer.top-epsilon||inner.right>outer.right+epsilon||inner.bottom>outer.bottom+epsilon)issues.push(`card ${index+1} child ${childIndex+1} escapes bounds`)})});return issues});expect(violations).toEqual([])});"
+          assert text.count(weak) == 1
+          assert strong not in text
+          tests.write_text(text.replace(weak, strong))
+
+          workflow = Path('.github/workflows/site-quality.yml')
+          text = workflow.read_text()
+          current = 'grep: "cold-start limits|tablet project cards|proof uses immutable"'
+          original = 'grep: "cold-start limits|proof uses immutable"'
+          assert text.count(current) == 1
+          workflow.write_text(text.replace(current, original))
           PY
       - name: Run static verification
         run: npm test
-      - name: Run tablet geometry test
+      - name: Run the tablet-only geometry test
         run: |
           npm ci
           npx playwright install --with-deps chromium
           npx playwright test --project=tablet-768 --grep "tablet project cards stay separate"
-      - name: Replace bootstrap commit with the requested single commit
+      - name: Squash onto the supplied head and push
         shell: bash
+        env:
+          EXPECTED_REMOTE_HEAD: ${{ github.sha }}
         run: |
           rm .github/workflows/apply-qa-fix.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
-          git commit --amend --no-edit
-          git push --force-with-lease origin HEAD:fix/restore-premium-motion
+          git reset --soft aad62d21683da71341a88bafe6875f9e033e0413
+          git commit -m "fix: harden evidence links and tablet card QA"
+          git push --force-with-lease=refs/heads/fix/restore-premium-motion:${EXPECTED_REMOTE_HEAD} origin HEAD:fix/restore-premium-motion
