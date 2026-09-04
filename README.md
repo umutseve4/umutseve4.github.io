@@ -1,16 +1,15 @@
 # umutseve4.github.io
 
-Recruiter-focused, evidence-first portfolio for **Umut Sever** — Data Engineering × Economics.
+A cinematic, evidence-first portfolio for **Umut Sever** across two connected tracks: **Data & Reliability Systems** and **Graphics & Simulation Systems**.
 
-## Product decisions
+## Design and engineering direction
 
-- Preserves the SEVER/05 editorial identity and premium motion instead of adopting a generic portfolio template.
-- States target role and opportunity status in the first viewport.
-- Frames every project through ownership, engineering decision, measured result, evidence, and known boundary.
-- Separates implemented, tested, verified, deployed, and production-ready status.
-- Keeps free-host cold starts and operational limitations visible before outbound demo links.
-- Uses dependency-free Canvas 2D; animation pauses off-screen, in hidden tabs, and under reduced-motion.
-- Does not publish a résumé link until a current, versioned résumé file exists.
+- A single Awwwards-inspired signature moment: a pointer-responsive Canvas field, editorial scale, grain, reveal motion, and restrained card depth.
+- No production runtime dependencies, external font CDN, analytics, trackers, or animation framework.
+- One owned `requestAnimationFrame` loop; it stops when the hero is off-screen, the tab is hidden, or reduced motion is requested.
+- Device-pixel ratio is capped at `1.5`; card tilt is bounded to approximately ±2 degrees.
+- Core content remains available without JavaScript. Keyboard navigation, visible focus, skip-link behavior, and reduced-motion fallback are first-class.
+- Claims expose ownership, decisions, and status boundaries. Project repositories remain the source of truth.
 
 ## Local verification
 
@@ -21,11 +20,13 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Static verification checks document structure, recruiter positioning, project ownership, engineering decisions, immutable evidence URLs, timezone correctness, mobile CSS, reduced-motion handling, and external-link safety. Playwright checks desktop/mobile overflow, recruiter content, project count, contact safety, keyboard fallback, reduced motion, motion lifecycle, and proof URL pinning.
+Static checks cover semantics, anchor integrity, exact contact targets, four selected systems, two-track positioning, external-link safety, motion observability, evidence pins, and boundary language.
+
+Playwright covers desktop, tablet, and mobile layouts; JavaScript-disabled fallback; keyboard skip navigation; contact targets; reduced motion; RAF pause/resume; bounded tilt; tablet containment; and immutable proof URLs.
 
 ## Evidence boundary
 
-A passing site test proves this portfolio renders and exposes its claims as designed. Project-level test counts and deployment boundaries remain sourced from each linked project repository. Commit-pinned artifacts prove identity, not current upstream data freshness or service availability.
+A passing portfolio test verifies this site’s rendering and declared behavior. It does not independently prove every linked project’s upstream freshness, service availability, GPU/browser compatibility, deployment health, or production readiness. Commit-pinned artifacts establish identity; each project repository defines current scope.
 
 ## License
 
