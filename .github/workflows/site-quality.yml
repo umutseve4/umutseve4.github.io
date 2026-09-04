@@ -34,15 +34,15 @@ jobs:
       matrix:
         include:
           - id: recruiter
-            grep: "core recruiter UX|contact targets"
+            grep: "core story|contacts are exact"
           - id: fallback
             grep: "keyboard skip link|JavaScript-off fallback"
           - id: content
-            grep: "cold-start limits|tablet project cards|proof uses immutable"
+            grep: "tablet cards|proof uses immutable"
           - id: motion-init
-            grep: "normal motion initializes|reduced motion suppresses"
+            grep: "normal motion owns|reduced motion suppresses"
           - id: tilt
-            grep: "fine-pointer card tilt"
+            grep: "fine-pointer tilt"
           - id: raf-lifecycle
             grep: "offscreen hero pauses"
     steps:
