@@ -106,9 +106,14 @@ They live between two markers and are rewritten on every run:
 Do not edit inside that block; edit the workflow step instead. Anything
 outside the markers is left untouched.
 
-One caveat worth stating plainly: the generator commits with `[skip ci]`
-to avoid recursion, so the commit that writes the head block does not
-itself trigger the site test suite. The following push does.
+Two caveats, both learned the hard way:
+
+1. The generator commits with the CI-skip token to avoid recursion, so the
+   commit that writes the head block does not itself run the site test
+   suite. A later ordinary push does.
+2. GitHub matches that token anywhere in the commit message, **body
+   included**. A commit that merely quotes it will also be skipped — so
+   describe it in words, never paste it, when you want the push to build.
 
 ## Licence
 
