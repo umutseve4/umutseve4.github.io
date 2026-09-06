@@ -20,7 +20,7 @@ not eyeballed:
 | Check | Value |
 |---|---|
 | Silhouette fidelity vs. source mask (IoU) | **0.9909** |
-| Amber fidelity vs. source mask (IoU) | **0.8967** |
+| Accent fidelity vs. source mask (IoU) | **0.8967** |
 | Vector master size | **4.3 KB** |
 
 ## Colours
@@ -28,12 +28,33 @@ not eyeballed:
 | Role | Hex | Use |
 |---|---|---|
 | Zift black | `#0B0B0B` | The mask itself. Never lightened. |
-| Amber | `#F2CC60` | Eye slits and rim light. The only accent. |
+| Signal red | `#FF4D4F` | Eye slits and rim light. The only accent. |
 | Surface dark | `#0D1117` | Backgrounds, matches GitHub dark. |
 | Off-white | `#F5F2EA` | Wordmark, body text on dark. |
 
-**One accent, not two.** Amber replaced the previous cyan `#00E5FF`
-across every surface. A second accent colour is a second brand.
+**One accent, not two.** Signal red replaced amber `#F2CC60`, which had
+itself replaced cyan `#00E5FF`. A second accent colour is a second brand.
+
+### Why this exact red
+
+The accent changes the geometry not at all — only the fill token. But the
+shade was chosen against measured contrast on `#0B0B0B`, not by eye:
+
+| Candidate | Contrast vs. `#0B0B0B` | Verdict |
+|---|---|---|
+| `#F2CC60` amber | 12.73 | The colour being replaced. |
+| `#FB040C` raw source red | 4.80 | Rejected. Sits on the sRGB gamut edge, clips on wide-gamut displays, and only scrapes AA. |
+| **`#FF4D4F`** | **6.02** | **Chosen.** Clears AA for text at any size, still unmistakably red. |
+| `#FF6B6B` | 7.09 | Reaches AAA but drifts to coral and softens the mask. |
+
+**The trade-off is deliberate and permanent: no red reaches 12.73.** Every
+red that climbs toward amber's contrast turns pink first. Roughly half the
+old headroom was spent on purpose. Do not "fix" it later by lightening the
+accent — that argument was already had and settled.
+
+The legibility gate below is hue-agnostic by construction (it tests
+`red > 120` and `red − blue > 45`), so it needed no adjustment: signal red
+scores 255 and 176 against those thresholds.
 
 ## Type
 
@@ -45,8 +66,8 @@ display or script face.
 ## Legibility floor
 
 The slits are the whole identity, so CI enforces them. Every generated
-icon is re-measured for amber coverage, and the build **fails** if amber
-drops below 1% at 32px or larger.
+icon is re-measured for accent coverage, and the build **fails** if the
+accent drops below 1% at 32px or larger.
 
 Measured on the current master:
 
@@ -66,7 +87,7 @@ Nothing sits inside that margin — no text, no border, no badge.
 ## Do not
 
 - Stretch, skew, or rotate the mark.
-- Recolour it. Amber is not orange, gold, or yellow.
+- Recolour it. Signal red is not orange, crimson, or coral.
 - Add a drop shadow, glow, gradient, or outline.
 - Place it on a mid-tone background — it needs `#0B0B0B`, `#0D1117`, or `#F5F2EA`.
 - Give it a mouth, teeth, a tongue, pupils, or a chest emblem.
