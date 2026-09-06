@@ -1,0 +1,144 @@
+name: brand-assets
+
+# The vector master is the only hand-authored brand file.
+# Every raster below is derived from it, so the mark can never drift
+# between surfaces. Change brand/zift.svg -> all assets regenerate.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'brand/zift.svg'
+      - '.github/workflows/brand-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-assets
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install renderers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin imagemagick fonts-dejavu-core
+          rsvg-convert --version
+
+      - name: Derive the icon crop from the master
+        run: |
+          python3 - <<'PY'
+          import re, pathlib
+          src = pathlib.Path('brand/zift.svg').read_text()
+          m = re.search(r'<view id="mark" viewBox="([^"]+)"', src)
+          assert m, 'master svg must carry the <view id="mark"> crop'
+          crop = m.group(1)
+          mark = re.sub(r'viewBox="0 0 512 512"', f'viewBox="{crop}"', src, count=1)
+          pathlib.Path('brand/zift-mark.svg').write_text(mark)
+          print('mark viewBox =', crop)
+          PY
+
+      - name: Render PNG set
+        run: |
+          set -e
+          # full lockup - transparent
+          for s in 1024 512 256; do
+            rsvg-convert -w $s -h $s brand/zift.svg -o brand/zift-$s.png
+          done
+          # icon crop - avatars and favicons
+          for s in 512 192 180 128 48 32 16; do
+            rsvg-convert -w $s -h $s brand/zift-mark.svg -o brand/zift-mark-$s.png
+          done
+          cp brand/zift-mark-512.png brand/avatar-512.png
+          cp brand/zift-mark-128.png brand/avatar-128.png
+          cp brand/zift-mark-180.png brand/apple-touch-icon.png
+          convert brand/zift-mark-16.png brand/zift-mark-32.png brand/zift-mark-48.png brand/favicon.ico
+          cp brand/favicon.ico favicon.ico
+
+      - name: Compose banner and social card
+        run: |
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          FD = "/usr/share/fonts/truetype/dejavu/"
+          bold = lambda s: ImageFont.truetype(FD + "DejaVuSansMono-Bold.ttf", s)
+          reg  = lambda s: ImageFont.truetype(FD + "DejaVuSansMono.ttf", s)
+
+          BG    = (11, 11, 11)
+          AMBER = (242, 204, 96)
+          OFF   = (245, 242, 234)
+          DIM   = (140, 140, 134)
+
+          art = Image.open("brand/zift-1024.png").convert("RGBA")
+
+          def fit(h):
+              w = round(art.width * h / art.height)
+              return art.resize((w, h), Image.LANCZOS)
+
+          # --- X / GitHub banner 1500x500 ---
+          b = Image.new("RGB", (1500, 500), BG)
+          a = fit(420); b.paste(a, (110, 40), a)
+          d = ImageDraw.Draw(b)
+          d.text((560, 168), "ZIFT", font=bold(92), fill=OFF)
+          d.line((565, 286, 1330, 286), fill=AMBER, width=3)
+          d.text((563, 308), "kanitlanmamis iddiayi denetler", font=reg(30), fill=AMBER)
+          d.text((563, 352), "evidence over adjectives  /  nothing quietly fixed",
+                 font=reg(24), fill=DIM)
+          b.save("brand/banner-1500x500.png")
+
+          # --- Open Graph card 1200x630 ---
+          o = Image.new("RGB", (1200, 630), BG)
+          a = fit(460); o.paste(a, (90, 85), a)
+          d = ImageDraw.Draw(o)
+          d.text((530, 232), "ZIFT", font=bold(92), fill=OFF)
+          d.line((535, 352, 1120, 352), fill=AMBER, width=3)
+          d.text((533, 376), "kanitlanmamis iddiayi", font=reg(30), fill=AMBER)
+          d.text((533, 414), "denetler", font=reg(30), fill=AMBER)
+          d.text((533, 470), "umutseve4.github.io", font=reg(24), fill=DIM)
+          o.save("brand/og-1200x630.png")
+          print("banner + og composed")
+          PY
+
+      - name: Prove the mark survives shrinking
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          # The whole point of the amber slits is that they stay readable
+          # when the avatar is 32px in a timeline. Measure, do not assume.
+          fails = []
+          for s in (512, 180, 128, 48, 32, 16):
+              im = Image.open(f"brand/zift-mark-{s}.png").convert("RGBA")
+              px = im.load()
+              amber = sum(
+                  1
+                  for y in range(im.height)
+                  for x in range(im.width)
+                  if px[x, y][3] > 60
+                  and px[x, y][0] > 120
+                  and px[x, y][0] - px[x, y][2] > 45
+              )
+              pct = 100 * amber / (im.width * im.height)
+              print(f"{s:>4}px  amber {pct:5.2f}%")
+              if s >= 32 and pct < 1.0:
+                  fails.append((s, pct))
+          if fails:
+              raise SystemExit(f"amber vanished at {fails} - the mark is not legible")
+          print("legibility gate passed")
+          PY
+
+      - name: Commit generated assets
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A brand favicon.ico
+          if git diff --cached --quiet; then
+            echo "assets already current"
+          else
+            git commit -m "brand: regenerate raster assets from vector master [skip ci]"
+            git push
+          fi
