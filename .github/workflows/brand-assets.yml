@@ -89,7 +89,7 @@ jobs:
           reg = lambda s: ImageFont.truetype(MONO_R, s)
 
           BG = (11, 11, 11)
-          AMBER = (242, 204, 96)
+          SIGNAL = (255, 77, 79)
           OFF = (245, 242, 234)
           DIM = (140, 140, 134)
 
@@ -104,8 +104,8 @@ jobs:
           a = fit(420); b.paste(a, (110, 40), a)
           d = ImageDraw.Draw(b)
           d.text((560, 168), "ZIFT", font=bold(92), fill=OFF)
-          d.line((565, 286, 1330, 286), fill=AMBER, width=3)
-          d.text((563, 308), "kanitlanmamis iddiayi denetler", font=reg(30), fill=AMBER)
+          d.line((565, 286, 1330, 286), fill=SIGNAL, width=3)
+          d.text((563, 308), "kanitlanmamis iddiayi denetler", font=reg(30), fill=SIGNAL)
           d.text((563, 352), "evidence over adjectives  /  nothing quietly fixed",
                  font=reg(24), fill=DIM)
           b.save("brand/banner-1500x500.png")
@@ -115,9 +115,9 @@ jobs:
           a = fit(460); o.paste(a, (90, 85), a)
           d = ImageDraw.Draw(o)
           d.text((530, 232), "ZIFT", font=bold(92), fill=OFF)
-          d.line((535, 352, 1120, 352), fill=AMBER, width=3)
-          d.text((533, 376), "kanitlanmamis iddiayi", font=reg(30), fill=AMBER)
-          d.text((533, 414), "denetler", font=reg(30), fill=AMBER)
+          d.line((535, 352, 1120, 352), fill=SIGNAL, width=3)
+          d.text((533, 376), "kanitlanmamis iddiayi", font=reg(30), fill=SIGNAL)
+          d.text((533, 414), "denetler", font=reg(30), fill=SIGNAL)
           d.text((533, 470), "umutseve4.github.io", font=reg(24), fill=DIM)
           o.save("brand/og-1200x630.png")
           print("banner + og composed")
@@ -127,13 +127,13 @@ jobs:
         run: |
           python3 - <<'PY'
           from PIL import Image
-          # The whole point of the amber slits is that they stay readable
+          # The whole point of the signal slits is that they stay readable
           # when the avatar is 32px in a timeline. Measure, do not assume.
           rows, fails = [], []
           for s in (512, 180, 128, 48, 32, 16):
               im = Image.open(f"brand/zift-mark-{s}.png").convert("RGBA")
               px = im.load()
-              amber = sum(
+              signal = sum(
                   1
                   for y in range(im.height)
                   for x in range(im.width)
@@ -141,17 +141,17 @@ jobs:
                   and px[x, y][0] > 120
                   and px[x, y][0] - px[x, y][2] > 45
               )
-              pct = 100 * amber / (im.width * im.height)
+              pct = 100 * signal / (im.width * im.height)
               rows.append(f"| {s}px | {pct:.2f}% |")
-              print(f"{s:>4}px  amber {pct:5.2f}%")
+              print(f"{s:>4}px  signal {pct:5.2f}%")
               if s >= 32 and pct < 1.0:
                   fails.append((s, round(pct, 2)))
           import os
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
-              f.write("### ZIFT legibility\n\n| size | amber |\n|---|---|\n")
+              f.write("### ZIFT legibility\n\n| size | signal |\n|---|---|\n")
               f.write("\n".join(rows) + "\n")
           if fails:
-              raise SystemExit(f"amber vanished at {fails} - the mark is not legible")
+              raise SystemExit(f"signal vanished at {fails} - the mark is not legible")
           print("legibility gate passed")
           PY
 
