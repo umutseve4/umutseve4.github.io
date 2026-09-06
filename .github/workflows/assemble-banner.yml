@@ -1,0 +1,51 @@
+name: assemble-banner
+
+on:
+  push:
+    paths:
+      - 'banner-src/**'
+      - '.github/workflows/assemble-banner.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Concatenate the base64 parts in name order
+        run: |
+          set -euo pipefail
+          find banner-src -name 'hero.webp.b64.*' | sort > /tmp/order.txt
+          echo "parts found: $(wc -l < /tmp/order.txt)"
+          cat /tmp/order.txt
+          : > /tmp/hero.b64
+          while read -r part; do
+            tr -d '\r\n' < "$part" >> /tmp/hero.b64
+          done < /tmp/order.txt
+          echo "base64 characters: $(wc -c < /tmp/hero.b64)"
+
+      - name: Decode and verify against the recorded digest
+        run: |
+          set -euo pipefail
+          mkdir -p cover
+          base64 -d /tmp/hero.b64 > cover/zift-hero.webp
+          echo "decoded bytes: $(wc -c < cover/zift-hero.webp)"
+          sha256sum -c banner-src/hero.webp.sha256
+          file cover/zift-hero.webp
+
+      - name: Commit the banner when it changed
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cover/zift-hero.webp
+          if git diff --cached --quiet; then
+            echo 'banner unchanged, nothing to commit'
+            exit 0
+          fi
+          git commit -m 'cover: rebuild zift-hero.webp from verified base64 parts'
+          git push
