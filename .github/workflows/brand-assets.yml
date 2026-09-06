@@ -28,8 +28,11 @@ jobs:
       - name: Install renderers
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq librsvg2-bin imagemagick fonts-dejavu-core
+          sudo apt-get install -y -qq \
+            librsvg2-bin imagemagick fonts-dejavu-core python3-pil
           rsvg-convert --version
+          python3 -c "import PIL; print('Pillow', PIL.__version__)"
+          fc-list | grep -i "dejavu.*mono" || true
 
       - name: Derive the icon crop from the master
         run: |
@@ -64,15 +67,31 @@ jobs:
       - name: Compose banner and social card
         run: |
           python3 - <<'PY'
+          import glob
           from PIL import Image, ImageDraw, ImageFont
-          FD = "/usr/share/fonts/truetype/dejavu/"
-          bold = lambda s: ImageFont.truetype(FD + "DejaVuSansMono-Bold.ttf", s)
-          reg  = lambda s: ImageFont.truetype(FD + "DejaVuSansMono.ttf", s)
 
-          BG    = (11, 11, 11)
+          def find(*names):
+              # Do not trust a hard-coded font path. Search, and if nothing
+              # is found say exactly what was tried instead of silently
+              # falling back to a bitmap default that ruins the artwork.
+              roots = ("/usr/share/fonts/**/%s", "/usr/local/share/fonts/**/%s")
+              for n in names:
+                  for r in roots:
+                      hits = glob.glob(r % n, recursive=True)
+                      if hits:
+                          return hits[0]
+              raise SystemExit(f"font not found, tried: {names}")
+
+          MONO_B = find("DejaVuSansMono-Bold.ttf", "DejaVuSans-Bold.ttf")
+          MONO_R = find("DejaVuSansMono.ttf", "DejaVuSans.ttf")
+          print("bold:", MONO_B, "\nreg :", MONO_R)
+          bold = lambda s: ImageFont.truetype(MONO_B, s)
+          reg = lambda s: ImageFont.truetype(MONO_R, s)
+
+          BG = (11, 11, 11)
           AMBER = (242, 204, 96)
-          OFF   = (245, 242, 234)
-          DIM   = (140, 140, 134)
+          OFF = (245, 242, 234)
+          DIM = (140, 140, 134)
 
           art = Image.open("brand/zift-1024.png").convert("RGBA")
 
@@ -110,7 +129,7 @@ jobs:
           from PIL import Image
           # The whole point of the amber slits is that they stay readable
           # when the avatar is 32px in a timeline. Measure, do not assume.
-          fails = []
+          rows, fails = [], []
           for s in (512, 180, 128, 48, 32, 16):
               im = Image.open(f"brand/zift-mark-{s}.png").convert("RGBA")
               px = im.load()
@@ -123,9 +142,14 @@ jobs:
                   and px[x, y][0] - px[x, y][2] > 45
               )
               pct = 100 * amber / (im.width * im.height)
+              rows.append(f"| {s}px | {pct:.2f}% |")
               print(f"{s:>4}px  amber {pct:5.2f}%")
               if s >= 32 and pct < 1.0:
-                  fails.append((s, pct))
+                  fails.append((s, round(pct, 2)))
+          import os
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("### ZIFT legibility\n\n| size | amber |\n|---|---|\n")
+              f.write("\n".join(rows) + "\n")
           if fails:
               raise SystemExit(f"amber vanished at {fails} - the mark is not legible")
           print("legibility gate passed")
