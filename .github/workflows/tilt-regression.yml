@@ -1,0 +1,60 @@
+name: tilt-regression
+on:
+  pull_request:
+    paths:
+      - index.html
+      - tests/tilt-regression.spec.mjs
+      - playwright.config.mjs
+      - package.json
+      - .github/workflows/tilt-regression.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tilt-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: tilt-${{ matrix.id }}-repeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: direction
+            grep: "fine-pointer card tilt preserves direction and resets every variable"
+          - id: clamp
+            grep: "fine-pointer card tilt clamps out-of-card synthetic coordinates"
+          - id: geometry
+            grep: "fine-pointer card tilt rejects degenerate geometry without stale state"
+          - id: pointer
+            grep: "fine-pointer card tilt responds to a real browser pointer"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Repeat the scenario across all existing viewport projects
+        id: regression
+        # Stop this diagnostic job at its first failure without suppressing it.
+        # The original site-quality suite still runs every test independently.
+        run: npm run test:browser -- tests/tilt-regression.spec.mjs --grep "${{ matrix.grep }}" --workers=1 --repeat-each=10 --max-failures=1
+      - name: Preserve failure diagnostics
+        if: ${{ !cancelled() && steps.regression.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tilt-${{ matrix.id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+          include-hidden-files: false
+          overwrite: false
