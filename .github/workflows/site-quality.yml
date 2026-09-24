@@ -54,4 +54,18 @@ jobs:
           node-version: 20
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser -- --grep "${{ matrix.grep }}"
+      - name: Run browser tests
+        id: browser_tests
+        run: npm run test:browser -- --grep "${{ matrix.grep }}"
+      - name: Upload browser failure diagnostics
+        if: ${{ !cancelled() && steps.browser_tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-${{ matrix.id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+          include-hidden-files: false
+          overwrite: false
