@@ -30,8 +30,6 @@ jobs:
             grep: "fine-pointer card tilt clamps out-of-card synthetic coordinates"
           - id: geometry
             grep: "fine-pointer card tilt rejects degenerate geometry without stale state"
-          - id: pointer
-            grep: "fine-pointer card tilt responds to a real browser pointer"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -58,3 +56,86 @@ jobs:
           if-no-files-found: warn
           include-hidden-files: false
           overwrite: false
+
+  pointer:
+    # Same scenario, projects, repetition count, worker count and failure limit.
+    # A separate job avoids racing matrix outputs when reporting the assertion.
+    name: tilt-pointer-repeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      failure-title: ${{ steps.diagnose.outputs.failure-title }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - run: npm install --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Repeat real pointer interaction across all existing viewport projects
+        id: regression
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: pointer-results.json
+          PLAYWRIGHT_HTML_OPEN: never
+        run: npm run test:browser -- tests/tilt-regression.spec.mjs --grep "fine-pointer card tilt responds to a real browser pointer" --workers=1 --repeat-each=10 --max-failures=1 --reporter=line,html,json
+      - name: Describe the first failed pointer assertion without suppressing failure
+        id: diagnose
+        if: ${{ !cancelled() && failure() }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { stripVTControlCharacters } from 'node:util';
+          const clean = (value, limit) => stripVTControlCharacters(String(value ?? ''))
+            .replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, limit);
+          let title = 'No readable test report; inspect setup or runner logs';
+          try {
+            const report = JSON.parse(readFileSync('pointer-results.json', 'utf8'));
+            const failures = [];
+            function visit(suite) {
+              for (const spec of suite.specs ?? []) {
+                for (const test of spec.tests ?? []) {
+                  if (test.status !== 'unexpected') continue;
+                  const result = (test.results ?? []).find(item => ['failed', 'timedOut', 'interrupted'].includes(item.status)) ?? test.results?.at(-1);
+                  const error = result?.errors?.[0] ?? result?.error ?? {};
+                  failures.push(`${clean(test.projectName, 30)} ${clean(spec.file, 60)}:${error.location?.line ?? spec.line ?? '?'} | ${clean(error.message ?? error.value ?? result?.status ?? 'Unexpected outcome', 370)}`);
+                }
+              }
+              for (const child of suite.suites ?? []) visit(child);
+            }
+            for (const suite of report.suites ?? []) visit(suite);
+            title = failures[0] ?? (report.errors?.length
+              ? `Runner error: ${clean(report.errors[0].message ?? report.errors[0].value, 370)}`
+              : 'No unexpected pointer tests in report; inspect runner logs');
+          } catch (error) {
+            if (error.code !== 'ENOENT') title = 'Unreadable test JSON; inspect preserved diagnostics and runner logs';
+          }
+          // Bounded single-line display data. Never interpolate it into shell code.
+          appendFileSync(process.env.GITHUB_OUTPUT, `failure-title=${clean(title, 500)}\n`);
+          NODE
+      - name: Preserve pointer failure diagnostics
+        if: ${{ !cancelled() && steps.regression.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tilt-pointer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            pointer-results.json
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+          include-hidden-files: false
+          overwrite: false
+
+  pointer_failure:
+    name: 'Pointer failure: ${{ needs.pointer.outputs.failure-title }}'
+    needs: pointer
+    if: ${{ !cancelled() && needs.pointer.result == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions: {}
+    steps:
+      - name: Keep the failed pointer check visible; not a passing quality gate
+        run: exit 1
