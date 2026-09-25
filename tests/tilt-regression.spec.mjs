@@ -131,7 +131,21 @@ test('fine-pointer card tilt responds to a real browser pointer', async ({page})
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const card = page.locator('.project').first();
-  await card.hover({position: {x: 20, y: 20}});
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toHaveAttribute('data-revealed', 'true');
+  // Tall mobile cards can extend above the viewport after scrolling. Target a
+  // visible interior point below the fixed nav, not an offscreen top corner.
+  const point = await card.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    const navBottom = document.querySelector('nav').getBoundingClientRect().bottom;
+    const left = Math.max(rect.left + 8, 8), right = Math.min(rect.right - 8, innerWidth - 8);
+    const top = Math.max(rect.top + 8, navBottom + 8), bottom = Math.min(rect.bottom - 8, innerHeight - 8);
+    if (right <= left || bottom <= top) throw new Error('Card has no unobstructed visible interior');
+    const x = left + (right - left) * 0.25, y = top + (bottom - top) * 0.35;
+    return {x, y, hitsCard: node.contains(document.elementFromPoint(x, y))};
+  });
+  expect(point.hitsCard).toBe(true);
+  await page.mouse.move(point.x, point.y);
   await expect(card).toHaveAttribute('data-tilt-active', 'true');
   const sample = await card.evaluate(node => {
     const style = getComputedStyle(node);
@@ -144,10 +158,21 @@ test('fine-pointer card tilt responds to a real browser pointer', async ({page})
   });
   expectFiniteBounds(sample);
   expect(Math.abs(sample.x) + Math.abs(sample.y)).toBeGreaterThan(0);
+  // CSS variables alone do not prove that the cascade renders the rotation.
+  await expect.poll(() => card.evaluate(node => {
+    const transform = getComputedStyle(node).transform;
+    if (transform === 'none') return false;
+    const matrix = new DOMMatrixReadOnly(transform);
+    return Math.abs(matrix.m13) + Math.abs(matrix.m23) > 0.0001;
+  })).toBe(true);
   await page.mouse.move(0, 0);
   await expect(card).toHaveAttribute('data-tilt-active', 'false');
   const reset = await card.evaluate(node => ['--tilt-x', '--tilt-y', '--spot-x', '--spot-y']
     .map(name => Number.parseFloat(getComputedStyle(node).getPropertyValue(name))));
   expect(reset).toEqual([0, 0, 50, 50]);
+  await expect.poll(() => card.evaluate(node => {
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+    return Math.abs(matrix.m13) + Math.abs(matrix.m23);
+  })).toBeLessThan(0.0001);
   expect(errors).toEqual([]);
 });

@@ -117,6 +117,7 @@ h1{font-size:clamp(4.1rem,14vw,12.5rem);line-height:.72;letter-spacing:-.085em;m
 footer{padding:1.5rem 4vw;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:.8rem;justify-content:space-between;color:var(--dim);font:500 .62rem ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em}
 [data-revealed="false"]{opacity:.01;transform:translateY(2.2rem)}
 [data-revealed="true"]{opacity:1;transform:none;transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+.project[data-revealed="true"]{transform:perspective(1100px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));transition:opacity .8s ease,transform .18s ease,background-color .3s}
 @keyframes grain{50%{transform:translate(2%,-1%)}}
 @keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
 @keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.16)}}
